@@ -55,11 +55,49 @@ final_clip.write_videofile(output_path, codec='libx264', audio_codec='aac')
 ##############################################################################
 # Traitement des commentateurs
 import speech_recognition as sr
+from pydub import AudioSegment
 
 recognizer = sr.Recognizer()
-audio_file = 'chemin/vers/votre/fichier/audio.mp3'
+# audio_file = 'chemin/vers/votre/fichier/audio.mp3'
 
-with sr.AudioFile(audio_file) as source:
-    audio_data = recognizer.record(source)
-    text = recognizer.recognize_google(audio_data, language="fr-FR")  # Assurez-vous de choisir la bonne langue
-    print(text)
+
+# Convertir le MP3 en WAV
+# audio_path_mp3 = '/home/morlot/code/numendo/essais/FULL MATCH Manchester City 2-1 Manchester United FINAL Emira.mp3'
+audio_path_wav = '/home/morlot/code/numendo/essais/FULL MATCH Manchester City 2-1 Manchester United FINAL Emira.wav'
+
+sound = AudioSegment.from_mp3(audio_path)
+sound.export(audio_path_wav, format="wav")
+
+# Charger le fichier WAV
+audio = AudioSegment.from_wav(audio_path_wav)
+
+# Découper en segments (par exemple, segments de 30 secondes)
+segment_length = 30 * 1000  # Durée en millisecondes
+segments = [audio[i:i + segment_length] for i in range(0, len(audio), segment_length)]
+
+# Chemin du fichier texte où stocker les transcriptions
+transcription_file_path = '/home/morlot/code/numendo/essais/transcriptions.txt'
+
+with open(transcription_file_path, "w") as file:
+    for i, segment in enumerate(segments):
+        # Calculer le temps de début du segment en secondes
+        start_time = i * segment_length / 1000  # Convertir en secondes
+
+        segment.export("temp_segment.wav", format="wav")
+        with sr.AudioFile("temp_segment.wav") as source:
+            audio_data = recognizer.record(source)
+            try:
+                text = recognizer.recognize_google(audio_data, language="en-US")
+                print(f"Temps: {start_time}s - Segment {i}: {text}")
+                file.write(f"Temps: {start_time}s - Segment {i}: {text}\n\n")
+            except sr.RequestError as e:
+                print(f"Erreur de requête pour le segment {i}: {e}")
+                file.write(f"Erreur de requête pour le segment {i}: {e}\n\n")
+            except sr.UnknownValueError:
+                print(f"Aucune parole détectée dans le segment {i}")
+                file.write(f"Aucune parole détectée dans le segment {i}\n\n")
+
+print(f"Transcriptions sauvegardées dans {transcription_file_path}")
+    
+
+
